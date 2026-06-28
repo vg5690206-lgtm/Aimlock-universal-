@@ -1,0 +1,1007 @@
+-- ╔════════════════════════════════════════════════════════════════╗
+-- ║    ESP PROXIMITY PROMPTS v4.0                                  ║
+-- ║    Compatível 100% com Roblox                                  ║
+-- ╚════════════════════════════════════════════════════════════════╝
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- ═══════════════════════════════════════════════════════════════
+-- 📚 DICIONÁRIO DE TRADUÇÃO
+-- ═══════════════════════════════════════════════════════════════
+local translations = {
+    ["open"]="Abrir",["close"]="Fechar",["interact"]="Interagir",
+    ["talk"]="Falar",["take"]="Pegar",["use"]="Usar",
+    ["enter"]="Entrar",["exit"]="Sair",["examine"]="Examinar",
+    ["read"]="Ler",["pickup"]="Pegar",["pick"]="Pegar",
+    ["buy"]="Comprar",["sell"]="Vender",["speak"]="Falar",
+    ["search"]="Buscar",["break"]="Quebrar",["push"]="Empurrar",
+    ["pull"]="Puxar",["attack"]="Atacar",["unlock"]="Desbloquear",
+    ["lock"]="Trancar",["gather"]="Coletar",["harvest"]="Colher",
+    ["mine"]="Minerar",["fish"]="Pescar",["chop"]="Cortar",
+    ["cook"]="Cozinhar",["craft"]="Criar",["trade"]="Comerciar",
+    ["loot"]="Saquear",["activate"]="Ativar",["collect"]="Coletar",
+    ["grab"]="Pegar",["equip"]="Equipar",["repair"]="Reparar",
+    ["upgrade"]="Melhorar",["inspect"]="Inspecionar",
+    ["deposit"]="Depositar",["withdraw"]="Sacar",
+    ["accept"]="Aceitar",["complete"]="Completar",
+    ["chest"]="Baú",["door"]="Porta",["npc"]="NPC",
+    ["box"]="Caixa",["container"]="Contentor",["item"]="Item",
+    ["object"]="Objeto",["treasure"]="Tesouro",["weapon"]="Arma",
+    ["armor"]="Armadura",["key"]="Chave",["gate"]="Portão",
+    ["window"]="Janela",["shop"]="Loja",["vendor"]="Vendedor",
+    ["merchant"]="Comerciante",["guard"]="Guarda",["enemy"]="Inimigo",
+    ["ally"]="Aliado",["quest"]="Missão",["teleporter"]="Teletransportador",
+    ["portal"]="Portal",["trap"]="Armadilha",["crystal"]="Cristal",
+    ["gem"]="Gema",["ore"]="Minério",["wood"]="Madeira",
+    ["food"]="Comida",["potion"]="Poção",["scroll"]="Pergaminho",
+    ["book"]="Livro",["map"]="Mapa",["sword"]="Espada",
+    ["knife"]="Faca",["bow"]="Arco",["shield"]="Escudo",
+    ["helmet"]="Capacete",["boots"]="Botas",["barrel"]="Barril",
+    ["crate"]="Engradado",["campfire"]="Fogueira",["forge"]="Forja",
+    ["anvil"]="Bigorna",["workbench"]="Bancada",["furnace"]="Fornalha",
+    ["cauldron"]="Caldeirão",["altar"]="Altar",["shrine"]="Santuário",
+    ["statue"]="Estátua",["sign"]="Placa",["lever"]="Alavanca",
+    ["button"]="Botão",["switch"]="Interruptor",
+    ["rare"]="Raro",["epic"]="Épico",["legendary"]="Lendário",
+    ["common"]="Comum",["uncommon"]="Incomum",["locked"]="Trancado",
+    ["unlocked"]="Destrancado",["broken"]="Quebrado",["sealed"]="Selado",
+    ["ancient"]="Antigo",["golden"]="Dourado",["magical"]="Mágico",
+    ["cursed"]="Amaldiçoado",["blessed"]="Abençoado",
+    ["fire"]="Fogo",["ice"]="Gelo",["water"]="Água",
+    ["earth"]="Terra",["wind"]="Vento",["holy"]="Sagrado",
+}
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🎨 CATEGORIAS
+-- ═══════════════════════════════════════════════════════════════
+local categories = {
+    {keywords={"chest","bau","treasure","tesouro","gold","ouro","silver","prata"}, color=Color3.fromRGB(255,215,0),   icon="[BAU]",    label="Baus"},
+    {keywords={"door","porta","gate","portao","window","janela"},                  color=Color3.fromRGB(100,180,255), icon="[PORTA]",  label="Portas"},
+    {keywords={"key","chave","lock","trancado","unlock"},                          color=Color3.fromRGB(255,165,0),   icon="[CHAVE]",  label="Chaves"},
+    {keywords={"enemy","inimigo","trap","armadilha","guard","guarda"},             color=Color3.fromRGB(255,80,80),   icon="[AVISO]",  label="Inimigos"},
+    {keywords={"npc","merchant","comerciante","vendor","vendedor","quest","missao","shop","loja"}, color=Color3.fromRGB(180,120,255), icon="[NPC]", label="NPCs"},
+    {keywords={"potion","pocao","food","comida","ore","minerio","crystal","cristal","gem","gema","wood","madeira"}, color=Color3.fromRGB(100,220,100), icon="[REC]", label="Recursos"},
+    {keywords={"sword","espada","weapon","arma","bow","arco","shield","escudo","armor","armadura","knife","faca"}, color=Color3.fromRGB(200,200,200), icon="[ARM]", label="Armas"},
+    {keywords={"portal","teleporter","teletransportador"},                         color=Color3.fromRGB(0,255,220),   icon="[PORT]",   label="Portais"},
+    {keywords={"forge","forja","anvil","bigorna","workbench","bancada","furnace","craft"}, color=Color3.fromRGB(255,140,60), icon="[CRAFT]", label="Crafting"},
+}
+
+local function getCategory(objectName)
+    local lower = string.lower(objectName)
+    lower = lower:gsub("á","a"):gsub("ã","a"):gsub("â","a"):gsub("é","e")
+                 :gsub("ê","e"):gsub("í","i"):gsub("ó","o"):gsub("õ","o")
+                 :gsub("ô","o"):gsub("ú","u"):gsub("ç","c")
+    for _, cat in ipairs(categories) do
+        for _, kw in ipairs(cat.keywords) do
+            if lower:find(kw, 1, true) then
+                return cat.color, cat.icon, cat.label
+            end
+        end
+    end
+    return Color3.fromRGB(0,255,0), "[OBJ]", "Outros"
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🌐 TRADUÇÃO COM CACHE
+-- ═══════════════════════════════════════════════════════════════
+local translationCache = {}
+
+local function translateText(text)
+    if not text or text == "" then return "Objeto" end
+    if translationCache[text] then return translationCache[text] end
+    local lower = string.lower(text)
+    if translations[lower] then
+        translationCache[text] = translations[lower]
+        return translations[lower]
+    end
+    local words = {}
+    for word in string.gmatch(text, "%S+") do
+        table.insert(words, translations[string.lower(word)] or word)
+    end
+    local result = table.concat(words, " ")
+    translationCache[text] = result
+    return result
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- ⚙️ CONFIGURAÇÕES
+-- ═══════════════════════════════════════════════════════════════
+local config = {
+    espEnabled    = false,
+    showDistance  = true,
+    maxDistance   = 500,
+    filterText    = "",
+    darkTheme     = true,
+    filterHistory = {},
+}
+
+local themes = {
+    dark = {
+        bg      = Color3.fromRGB(28,28,32),
+        titleBg = Color3.fromRGB(18,18,22),
+        tabBg   = Color3.fromRGB(35,35,42),
+        accent  = Color3.fromRGB(0,220,100),
+        text    = Color3.fromRGB(220,220,220),
+        subtext = Color3.fromRGB(140,140,150),
+        inputBg = Color3.fromRGB(40,40,48),
+        btnBg   = Color3.fromRGB(50,50,60),
+        danger  = Color3.fromRGB(220,60,60),
+        info    = Color3.fromRGB(60,130,220),
+        tabSel  = Color3.fromRGB(0,180,80),
+    },
+    light = {
+        bg      = Color3.fromRGB(240,240,245),
+        titleBg = Color3.fromRGB(210,210,220),
+        tabBg   = Color3.fromRGB(225,225,232),
+        accent  = Color3.fromRGB(0,160,80),
+        text    = Color3.fromRGB(30,30,30),
+        subtext = Color3.fromRGB(100,100,110),
+        inputBg = Color3.fromRGB(255,255,255),
+        btnBg   = Color3.fromRGB(200,200,210),
+        danger  = Color3.fromRGB(200,50,50),
+        info    = Color3.fromRGB(50,110,200),
+        tabSel  = Color3.fromRGB(0,150,70),
+    },
+}
+
+local function T() return config.darkTheme and themes.dark or themes.light end
+
+local espObjects       = {}
+local monitoredPrompts = {}
+local guiRef           = nil
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🔍 FILTRO
+-- ═══════════════════════════════════════════════════════════════
+local function matchesFilter(objectName)
+    if config.filterText == "" then return true end
+    local f  = string.lower(config.filterText)
+    local n  = string.lower(objectName)
+    local nt = string.lower(translateText(objectName))
+    return n:find(f,1,true) ~= nil or nt:find(f,1,true) ~= nil
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 📍 ENCONTRAR PROMPTS
+-- ═══════════════════════════════════════════════════════════════
+local function findAllProximityPrompts()
+    local prompts = {}
+    for _, d in ipairs(workspace:GetDescendants()) do
+        if d:IsA("ProximityPrompt") then
+            table.insert(prompts, d)
+        end
+    end
+    return prompts
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🔢 CONTADOR E STATS
+-- ═══════════════════════════════════════════════════════════════
+local function updateCounterAndStats()
+    if not guiRef then return end
+    local camPos    = camera.CFrame.Position
+    local visible   = 0
+    local catCounts = {}
+
+    for _, espData in pairs(espObjects) do
+        if espData.TargetPart and espData.TargetPart.Parent then
+            local dist = (espData.TargetPart.Position - camPos).Magnitude
+            if dist <= config.maxDistance then
+                visible = visible + 1
+                local lbl = espData.CatLabel
+                catCounts[lbl] = (catCounts[lbl] or 0) + 1
+            end
+        end
+    end
+
+    if guiRef.counterLabel then
+        guiRef.counterLabel.Text = "ESPs visiveis: " .. visible
+    end
+
+    if guiRef.statsContainer then
+        for _, c in ipairs(guiRef.statsContainer:GetChildren()) do
+            if c:IsA("TextLabel") and c.Name == "StatRow" then c:Destroy() end
+        end
+        local th = T()
+        if visible == 0 then
+            local row = Instance.new("TextLabel")
+            row.Name = "StatRow"
+            row.Size = UDim2.new(1,0,0,22)
+            row.BackgroundTransparency = 1
+            row.Text = "Nenhum objeto no alcance"
+            row.TextColor3 = th.subtext
+            row.TextSize = 12
+            row.Font = Enum.Font.Gotham
+            row.TextXAlignment = Enum.TextXAlignment.Left
+            row.Parent = guiRef.statsContainer
+        else
+            local order = 1
+            for catLabel, count in pairs(catCounts) do
+                local icon = "[OBJ]"
+                for _, cat in ipairs(categories) do
+                    if cat.label == catLabel then icon = cat.icon break end
+                end
+                local row = Instance.new("TextLabel")
+                row.Name = "StatRow"
+                row.Size = UDim2.new(1,0,0,22)
+                row.BackgroundTransparency = 1
+                row.Text = icon .. " " .. catLabel .. ": " .. count
+                row.TextColor3 = th.text
+                row.TextSize = 13
+                row.Font = Enum.Font.Gotham
+                row.TextXAlignment = Enum.TextXAlignment.Left
+                row.LayoutOrder = order
+                row.Parent = guiRef.statsContainer
+                order = order + 1
+            end
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🎨 CRIAR LABEL ESP
+-- ═══════════════════════════════════════════════════════════════
+local function createESPLabel(prompt)
+    local targetPart = prompt.Parent
+    if not targetPart:IsA("BasePart") then
+        targetPart = targetPart:FindFirstChild("HumanoidRootPart")
+                  or targetPart:FindFirstChildOfClass("BasePart")
+    end
+    if not targetPart then return nil end
+
+    local objectName = prompt.ObjectText ~= "" and prompt.ObjectText or "Objeto"
+    local actionText = prompt.ActionText ~= "" and prompt.ActionText or "Interagir"
+    local keyText    = tostring(prompt.KeyboardKeyCode):gsub("Enum.KeyCode.","")
+
+    objectName = translateText(objectName)
+    actionText = translateText(actionText)
+
+    local color, icon, catLabel = getCategory(objectName)
+
+    local bill = Instance.new("BillboardGui")
+    bill.Name        = "ESP_ProxPrompt"
+    bill.Size        = UDim2.new(6,0,2,0)
+    bill.MaxDistance = config.maxDistance
+    bill.AlwaysOnTop = true
+    bill.Enabled     = true
+    bill.Parent      = targetPart
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Name               = "ESPText"
+    lbl.Size               = UDim2.new(1,0,1,0)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3         = color
+    lbl.TextSize           = 14
+    lbl.Font               = Enum.Font.GothamBold
+    lbl.TextScaled         = true
+    lbl.TextWrapped        = true
+    lbl.Text               = icon .. " " .. objectName .. "\n[" .. keyText .. "] " .. actionText
+    lbl.Parent             = bill
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color     = Color3.fromRGB(0,0,0)
+    stroke.Thickness = 2
+    stroke.Parent    = lbl
+
+    return {
+        BillboardGui = bill,
+        TextLabel    = lbl,
+        TargetPart   = targetPart,
+        Prompt       = prompt,
+        ObjectName   = objectName,
+        ActionText   = actionText,
+        KeyText      = keyText,
+        Color        = color,
+        Icon         = icon,
+        CatLabel     = catLabel,
+    }
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- ✅ ATIVAR / ❌ DESATIVAR
+-- ═══════════════════════════════════════════════════════════════
+local function deactivateESP()
+    if not config.espEnabled then return end
+    config.espEnabled = false
+    for _, espData in pairs(espObjects) do
+        if espData.BillboardGui.Parent then
+            espData.BillboardGui:Destroy()
+        end
+    end
+    espObjects       = {}
+    monitoredPrompts = {}
+    updateCounterAndStats()
+end
+
+local function activateESP()
+    if config.espEnabled then deactivateESP() end
+    config.espEnabled = true
+    for _, prompt in ipairs(findAllProximityPrompts()) do
+        if prompt.Parent and prompt.Parent.Parent then
+            local objectName = prompt.ObjectText ~= "" and prompt.ObjectText or "Objeto"
+            if matchesFilter(objectName) then
+                local espData = createESPLabel(prompt)
+                if espData then
+                    espObjects[prompt]       = espData
+                    monitoredPrompts[prompt] = true
+                end
+            end
+        end
+    end
+    updateCounterAndStats()
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🔄 MONITOR NOVOS (a cada 0.5s)
+-- ═══════════════════════════════════════════════════════════════
+local function monitorNewPrompts()
+    if not config.espEnabled then return end
+    local changed = false
+
+    for _, prompt in ipairs(findAllProximityPrompts()) do
+        if not monitoredPrompts[prompt] and prompt.Parent and prompt.Parent.Parent then
+            local objectName = prompt.ObjectText ~= "" and prompt.ObjectText or "Objeto"
+            if matchesFilter(objectName) then
+                local espData = createESPLabel(prompt)
+                if espData then
+                    espObjects[prompt]       = espData
+                    monitoredPrompts[prompt] = true
+                    changed = true
+                end
+            end
+        end
+    end
+
+    local toRemove = {}
+    for prompt, espData in pairs(espObjects) do
+        if not prompt.Parent or not prompt.Parent.Parent then
+            if espData.BillboardGui.Parent then espData.BillboardGui:Destroy() end
+            table.insert(toRemove, prompt)
+            changed = true
+        end
+    end
+    for _, p in ipairs(toRemove) do
+        espObjects[p] = nil
+        monitoredPrompts[p] = nil
+    end
+
+    if changed then updateCounterAndStats() end
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 📏 ATUALIZAR TAMANHO — só dentro da distância
+-- ═══════════════════════════════════════════════════════════════
+local statsTimer = 0
+
+local function updateDynamicSize(dt)
+    if not config.espEnabled then return end
+    local camPos = camera.CFrame.Position
+    local time   = tick()
+
+    statsTimer = statsTimer + dt
+    local doStats = statsTimer >= 1
+    if doStats then statsTimer = 0 end
+
+    for prompt, espData in pairs(espObjects) do
+        local part = espData.TargetPart
+        if part and part.Parent then
+            local dist = (part.Position - camPos).Magnitude
+
+            if dist > config.maxDistance then
+                espData.BillboardGui.Enabled = false
+            else
+                espData.BillboardGui.Enabled = true
+
+                local t  = math.clamp(dist / config.maxDistance, 0, 1)
+                local sz = 2.5 + t * 5.5
+                espData.BillboardGui.Size = UDim2.new(sz, 0, sz * 0.4, 0)
+
+                local alpha = 1
+                if dist < 20 then
+                    alpha = 0.5 + 0.5 * math.sin(time * 6)
+                end
+                espData.TextLabel.TextTransparency = 1 - alpha
+
+                if config.showDistance then
+                    espData.TextLabel.Text = espData.Icon .. " " .. espData.ObjectName
+                        .. "\n[" .. espData.KeyText .. "] " .. espData.ActionText
+                        .. " | " .. math.floor(dist) .. "m"
+                else
+                    espData.TextLabel.Text = espData.Icon .. " " .. espData.ObjectName
+                        .. "\n[" .. espData.KeyText .. "] " .. espData.ActionText
+                end
+            end
+        else
+            if espData.BillboardGui.Parent then espData.BillboardGui:Destroy() end
+            espObjects[prompt]       = nil
+            monitoredPrompts[prompt] = nil
+        end
+    end
+
+    if doStats then updateCounterAndStats() end
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🏗️ HELPERS DE GUI
+-- ═══════════════════════════════════════════════════════════════
+local function addCorner(parent, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 8)
+    c.Parent = parent
+    return c
+end
+
+local function addStroke(parent, color, thickness, transparency)
+    local s = Instance.new("UIStroke")
+    s.Color        = color or Color3.fromRGB(0,0,0)
+    s.Thickness    = thickness or 1
+    s.Transparency = transparency or 0.7
+    s.Parent       = parent
+    return s
+end
+
+local function addListLayout(parent, padding, direction)
+    local l = Instance.new("UIListLayout")
+    l.SortOrder     = Enum.SortOrder.LayoutOrder
+    l.Padding       = UDim.new(0, padding or 6)
+    l.FillDirection = direction or Enum.FillDirection.Vertical
+    l.Parent        = parent
+    return l
+end
+
+local function addPadding(parent, left, right, top, bottom)
+    local p = Instance.new("UIPadding")
+    p.PaddingLeft   = UDim.new(0, left   or 0)
+    p.PaddingRight  = UDim.new(0, right  or 0)
+    p.PaddingTop    = UDim.new(0, top    or 0)
+    p.PaddingBottom = UDim.new(0, bottom or 0)
+    p.Parent        = parent
+    return p
+end
+
+local function makeFrame(parent, size, pos, color, name)
+    local f = Instance.new("Frame")
+    f.Name             = name or "Frame"
+    f.Size             = size
+    f.Position         = pos or UDim2.new(0,0,0,0)
+    f.BackgroundColor3 = color or Color3.fromRGB(40,40,40)
+    f.BorderSizePixel  = 0
+    f.Parent           = parent
+    return f
+end
+
+local function makeLabel(parent, text, color, size, font, name)
+    local l = Instance.new("TextLabel")
+    l.Name               = name or "Label"
+    l.Size               = UDim2.new(1,0,0,22)
+    l.BackgroundTransparency = 1
+    l.Text               = text
+    l.TextColor3         = color or Color3.fromRGB(220,220,220)
+    l.TextSize           = size or 13
+    l.Font               = font or Enum.Font.Gotham
+    l.TextXAlignment     = Enum.TextXAlignment.Left
+    l.TextWrapped        = true
+    l.Parent             = parent
+    return l
+end
+
+local function makeButton(parent, text, color, textColor, size, name)
+    local b = Instance.new("TextButton")
+    b.Name             = name or "Button"
+    b.Size             = size or UDim2.new(1,0,0,36)
+    b.BackgroundColor3 = color or Color3.fromRGB(50,50,60)
+    b.Text             = text
+    b.TextColor3       = textColor or Color3.fromRGB(255,255,255)
+    b.TextSize         = 13
+    b.Font             = Enum.Font.GothamBold
+    b.BorderSizePixel  = 0
+    b.AutoButtonColor  = true
+    b.Parent           = parent
+    addCorner(b, 8)
+    return b
+end
+
+local function makeSectionLabel(parent, text)
+    local l = Instance.new("TextLabel")
+    l.Name               = "SectionLabel"
+    l.Size               = UDim2.new(1,0,0,18)
+    l.BackgroundTransparency = 1
+    l.Text               = text
+    l.TextColor3         = Color3.fromRGB(140,140,150)
+    l.TextSize           = 11
+    l.Font               = Enum.Font.GothamBold
+    l.TextXAlignment     = Enum.TextXAlignment.Left
+    l.Parent             = parent
+    return l
+end
+
+local function makeTextBox(parent, placeholder, name)
+    local th = T()
+    local b = Instance.new("TextBox")
+    b.Name              = name or "TextBox"
+    b.Size              = UDim2.new(1,0,0,34)
+    b.BackgroundColor3  = th.inputBg
+    b.BorderSizePixel   = 0
+    b.TextColor3        = th.accent
+    b.TextSize          = 13
+    b.Font              = Enum.Font.Gotham
+    b.PlaceholderText   = placeholder or ""
+    b.PlaceholderColor3 = th.subtext
+    b.ClearTextOnFocus  = false
+    b.TextXAlignment    = Enum.TextXAlignment.Left
+    b.Parent            = parent
+    addCorner(b, 8)
+    addPadding(b, 10, 10, 0, 0)
+    addStroke(b, Color3.fromRGB(80,80,100), 1, 0.5)
+    return b
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- 🎮 GUI PRINCIPAL
+-- ═══════════════════════════════════════════════════════════════
+local function createMainGUI()
+    local th = T()
+
+    -- ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name            = "ESPGui"
+    screenGui.ResetOnSpawn    = false
+    screenGui.IgnoreGuiInset  = true
+    screenGui.Parent          = game.CoreGui
+
+    -- MainFrame
+    local MainFrame = makeFrame(screenGui,
+        UDim2.new(0,340,0,500),
+        UDim2.new(0.5,-170,0.5,-250),
+        th.bg, "MainFrame")
+    addCorner(MainFrame, 12)
+    addStroke(MainFrame, Color3.fromRGB(0,0,0), 2, 0.6)
+
+    -- HeaderFrame
+    local HeaderFrame = makeFrame(MainFrame,
+        UDim2.new(1,0,0,46),
+        UDim2.new(0,0,0,0),
+        th.titleBg, "HeaderFrame")
+    addCorner(HeaderFrame, 12)
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name               = "TitleLabel"
+    titleLabel.Size               = UDim2.new(1,-110,1,0)
+    titleLabel.Position           = UDim2.new(0,12,0,0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text               = "ESP PROXIMITY v4"
+    titleLabel.TextColor3         = th.accent
+    titleLabel.TextSize           = 15
+    titleLabel.Font               = Enum.Font.GothamBold
+    titleLabel.TextXAlignment     = Enum.TextXAlignment.Left
+    titleLabel.Parent             = HeaderFrame
+
+    local themeBtn = makeButton(HeaderFrame, config.darkTheme and "LUZ" or "DARK",
+        th.btnBg, th.text, UDim2.new(0,44,0,28), "ThemeBtn")
+    themeBtn.Position = UDim2.new(1,-108,0.5,-14)
+    themeBtn.TextSize = 10
+
+    local minimizeBtn = makeButton(HeaderFrame, "-",
+        th.btnBg, Color3.fromRGB(255,255,255), UDim2.new(0,30,0,28), "MinimizeBtn")
+    minimizeBtn.Position = UDim2.new(1,-70,0.5,-14)
+    minimizeBtn.TextSize = 18
+
+    local closeBtn = makeButton(HeaderFrame, "X",
+        th.danger, Color3.fromRGB(255,255,255), UDim2.new(0,30,0,28), "CloseBtn")
+    closeBtn.Position = UDim2.new(1,-36,0.5,-14)
+
+    -- TabsFrame
+    local TabsFrame = makeFrame(MainFrame,
+        UDim2.new(1,0,0,36),
+        UDim2.new(0,0,0,46),
+        th.tabBg, "TabsFrame")
+    addListLayout(TabsFrame, 4, Enum.FillDirection.Horizontal)
+    addPadding(TabsFrame, 8, 8, 4, 4)
+
+    local ESPButton = makeButton(TabsFrame, "ESP",
+        th.tabSel, Color3.fromRGB(0,0,0), UDim2.new(0,90,0,28), "ESPButton")
+
+    local FilterButton = makeButton(TabsFrame, "FILTRO",
+        th.btnBg, th.text, UDim2.new(0,90,0,28), "FilterButton")
+
+    local InfoButton = makeButton(TabsFrame, "INFO",
+        th.btnBg, th.text, UDim2.new(0,90,0,28), "InfoButton")
+
+    -- ESPFrame
+    local ESPFrame = makeFrame(MainFrame,
+        UDim2.new(1,0,1,-82),
+        UDim2.new(0,0,0,82),
+        th.bg, "ESPFrame")
+    ESPFrame.Visible = true
+    addListLayout(ESPFrame, 8)
+    addPadding(ESPFrame, 12, 12, 10, 10)
+
+    makeSectionLabel(ESPFrame, "CONTROLO")
+    local ativarBtn = makeButton(ESPFrame, "ATIVAR ESP  (F5)",
+        th.btnBg, Color3.fromRGB(255,255,255), UDim2.new(1,0,0,40), "AtivarBtn")
+    ativarBtn.TextSize = 14
+
+    makeSectionLabel(ESPFrame, "DISTANCIA MAXIMA")
+    local distLabel = makeLabel(ESPFrame, "Distancia: " .. config.maxDistance .. "m", th.text, 13)
+
+    local sliderFrame = makeFrame(ESPFrame,
+        UDim2.new(1,0,0,36), nil, th.inputBg, "SliderFrame")
+    addCorner(sliderFrame, 8)
+
+    local btnMinus = makeButton(sliderFrame, "-",
+        th.danger, Color3.fromRGB(255,255,255), UDim2.new(0,44,1,0), "BtnMinus")
+    btnMinus.Position = UDim2.new(0,0,0,0)
+    btnMinus.TextSize = 20
+
+    local sliderVal = Instance.new("TextLabel")
+    sliderVal.Name               = "SliderVal"
+    sliderVal.Size               = UDim2.new(1,-88,1,0)
+    sliderVal.Position           = UDim2.new(0,44,0,0)
+    sliderVal.BackgroundTransparency = 1
+    sliderVal.Text               = tostring(config.maxDistance) .. "m"
+    sliderVal.TextColor3         = th.text
+    sliderVal.TextSize           = 13
+    sliderVal.Font               = Enum.Font.GothamBold
+    sliderVal.TextXAlignment     = Enum.TextXAlignment.Center
+    sliderVal.Parent             = sliderFrame
+
+    local btnPlus = makeButton(sliderFrame, "+",
+        th.accent, Color3.fromRGB(0,0,0), UDim2.new(0,44,1,0), "BtnPlus")
+    btnPlus.Position = UDim2.new(1,-44,0,0)
+    btnPlus.TextSize = 20
+
+    local showDistBtn = makeButton(ESPFrame, "VER DISTANCIA: ON",
+        th.info, Color3.fromRGB(255,255,255), UDim2.new(1,0,0,36), "ShowDistBtn")
+
+    makeSectionLabel(ESPFrame, "POSICAO DA JANELA")
+    local cornersRow = makeFrame(ESPFrame,
+        UDim2.new(1,0,0,36), nil, th.bg, "CornersRow")
+    cornersRow.BackgroundTransparency = 1
+    addListLayout(cornersRow, 4, Enum.FillDirection.Horizontal)
+
+    local cornerDefs = {
+        {text="TL", pos=UDim2.new(0,10,0,10)},
+        {text="TR", pos=UDim2.new(1,-350,0,10)},
+        {text="BL", pos=UDim2.new(0,10,1,-510)},
+        {text="BR", pos=UDim2.new(1,-350,1,-510)},
+    }
+    local cornerBtns = {}
+    for i, d in ipairs(cornerDefs) do
+        local cb = makeButton(cornersRow, d.text,
+            th.btnBg, th.text, UDim2.new(0,70,0,36), "Corner"..i)
+        cornerBtns[i] = {btn=cb, pos=d.pos}
+    end
+
+    -- FilterFrame
+    local FilterFrame = makeFrame(MainFrame,
+        UDim2.new(1,0,1,-82),
+        UDim2.new(0,0,0,82),
+        th.bg, "FilterFrame")
+    FilterFrame.Visible = false
+    addListLayout(FilterFrame, 8)
+    addPadding(FilterFrame, 12, 12, 10, 10)
+
+    makeSectionLabel(FilterFrame, "FILTRAR POR NOME (EN ou PT)")
+    local filterInput = makeTextBox(FilterFrame, "Ex: chest, bau, door, porta...", "FilterInput")
+
+    local filterBtnRow = makeFrame(FilterFrame,
+        UDim2.new(1,0,0,36), nil, th.bg, "FilterBtnRow")
+    filterBtnRow.BackgroundTransparency = 1
+    addListLayout(filterBtnRow, 6, Enum.FillDirection.Horizontal)
+
+    local applyBtn = makeButton(filterBtnRow, "APLICAR",
+        th.info, Color3.fromRGB(255,255,255), UDim2.new(0,148,0,36), "ApplyBtn")
+
+    local clearBtn = makeButton(filterBtnRow, "LIMPAR",
+        th.danger, Color3.fromRGB(255,255,255), UDim2.new(0,148,0,36), "ClearBtn")
+
+    local statusFilterLabel = makeLabel(FilterFrame, "", th.accent, 12,
+        Enum.Font.Gotham, "StatusFilterLabel")
+    statusFilterLabel.Size = UDim2.new(1,0,0,18)
+
+    makeSectionLabel(FilterFrame, "HISTORICO (clique para usar)")
+    local histContainer = makeFrame(FilterFrame,
+        UDim2.new(1,0,0,36), nil, th.inputBg, "HistContainer")
+    addCorner(histContainer, 8)
+    addPadding(histContainer, 8, 8, 6, 6)
+    addListLayout(histContainer, 4)
+
+    local emptyHistLabel = makeLabel(histContainer,
+        "Nenhum filtro usado ainda", th.subtext, 11, Enum.Font.Gotham, "EmptyHist")
+    emptyHistLabel.Size = UDim2.new(1,0,0,18)
+
+    -- InfoFrame
+    local InfoFrame = makeFrame(MainFrame,
+        UDim2.new(1,0,1,-82),
+        UDim2.new(0,0,0,82),
+        th.bg, "InfoFrame")
+    InfoFrame.Visible = false
+    addListLayout(InfoFrame, 8)
+    addPadding(InfoFrame, 12, 12, 10, 10)
+
+    makeSectionLabel(InfoFrame, "STATUS")
+    local counterLabel = makeLabel(InfoFrame, "ESPs visiveis: 0",
+        th.accent, 13, Enum.Font.GothamBold, "CounterLabel")
+    local statusLabel = makeLabel(InfoFrame, "ESP Desativado",
+        th.danger, 13, Enum.Font.Gotham, "StatusLabel")
+
+    makeSectionLabel(InfoFrame, "OBJETOS POR CATEGORIA")
+    local statsContainer = makeFrame(InfoFrame,
+        UDim2.new(1,0,0,36), nil, th.inputBg, "StatsContainer")
+    addCorner(statsContainer, 8)
+    addPadding(statsContainer, 10, 10, 6, 6)
+    local statsLayout = addListLayout(statsContainer, 3)
+    statsLayout.Changed:Connect(function()
+        statsContainer.Size = UDim2.new(1,0,0,
+            math.max(36, statsLayout.AbsoluteContentSize.Y + 12))
+    end)
+
+    makeSectionLabel(InfoFrame, "VERSAO")
+    makeLabel(InfoFrame, "v4.0 — F5 para ativar/desativar", th.subtext, 11)
+
+    guiRef = {
+        counterLabel   = counterLabel,
+        statsContainer = statsContainer,
+    }
+
+    -- ════════════════════════════════════════════════════════════
+    -- SISTEMA DE ABAS
+    -- ════════════════════════════════════════════════════════════
+    local tabs = {
+        {btn=ESPButton,    frame=ESPFrame},
+        {btn=FilterButton, frame=FilterFrame},
+        {btn=InfoButton,   frame=InfoFrame},
+    }
+
+    local function switchTab(idx)
+        for i, tab in ipairs(tabs) do
+            tab.frame.Visible = (i == idx)
+            if i == idx then
+                tab.btn.BackgroundColor3 = th.tabSel
+                tab.btn.TextColor3       = Color3.fromRGB(0,0,0)
+            else
+                tab.btn.BackgroundColor3 = th.btnBg
+                tab.btn.TextColor3       = th.text
+            end
+        end
+    end
+
+    ESPButton.MouseButton1Click:Connect(function()    switchTab(1) end)
+    FilterButton.MouseButton1Click:Connect(function() switchTab(2) end)
+    InfoButton.MouseButton1Click:Connect(function()
+        updateCounterAndStats()
+        switchTab(3)
+    end)
+
+    -- ════════════════════════════════════════════════════════════
+    -- FUNÇÕES DE UI
+    -- ════════════════════════════════════════════════════════════
+    local function setESPState(on)
+        if on then
+            ativarBtn.BackgroundColor3 = th.accent
+            ativarBtn.Text             = "DESATIVAR ESP  (F5)"
+            ativarBtn.TextColor3       = Color3.fromRGB(0,0,0)
+            statusLabel.Text           = "ESP Ativado"
+            statusLabel.TextColor3     = th.accent
+        else
+            ativarBtn.BackgroundColor3 = th.btnBg
+            ativarBtn.Text             = "ATIVAR ESP  (F5)"
+            ativarBtn.TextColor3       = Color3.fromRGB(255,255,255)
+            statusLabel.Text           = "ESP Desativado"
+            statusLabel.TextColor3     = th.danger
+        end
+    end
+
+    local function addToHistory(text)
+        if text == "" then return end
+        for _, e in ipairs(config.filterHistory) do
+            if e == text then return end
+        end
+        table.insert(config.filterHistory, 1, text)
+        if #config.filterHistory > 5 then table.remove(config.filterHistory) end
+
+        for _, c in ipairs(histContainer:GetChildren()) do
+            if c:IsA("TextButton") then c:Destroy() end
+        end
+        emptyHistLabel.Visible = #config.filterHistory == 0
+
+        for idx, entry in ipairs(config.filterHistory) do
+            local hBtn = Instance.new("TextButton")
+            hBtn.Name               = "HistBtn"
+            hBtn.Size               = UDim2.new(1,0,0,20)
+            hBtn.BackgroundTransparency = 1
+            hBtn.Text               = ">> " .. entry
+            hBtn.TextColor3         = th.subtext
+            hBtn.TextSize           = 12
+            hBtn.Font               = Enum.Font.Gotham
+            hBtn.TextXAlignment     = Enum.TextXAlignment.Left
+            hBtn.LayoutOrder        = idx
+            hBtn.Parent             = histContainer
+            hBtn.MouseButton1Click:Connect(function()
+                filterInput.Text = entry
+            end)
+        end
+        histContainer.Size = UDim2.new(1,0,0,
+            math.max(36, #config.filterHistory * 24 + 12))
+    end
+
+    -- ════════════════════════════════════════════════════════════
+    -- EVENTOS
+    -- ════════════════════════════════════════════════════════════
+    ativarBtn.MouseButton1Click:Connect(function()
+        if not config.espEnabled then
+            activateESP()
+            setESPState(true)
+        else
+            deactivateESP()
+            setESPState(false)
+        end
+    end)
+
+    btnMinus.MouseButton1Click:Connect(function()
+        config.maxDistance = math.max(50, config.maxDistance - 50)
+        sliderVal.Text   = tostring(config.maxDistance) .. "m"
+        distLabel.Text   = "Distancia: " .. config.maxDistance .. "m"
+        for _, e in pairs(espObjects) do
+            e.BillboardGui.MaxDistance = config.maxDistance
+        end
+        updateCounterAndStats()
+    end)
+
+    btnPlus.MouseButton1Click:Connect(function()
+        config.maxDistance = math.min(2000, config.maxDistance + 50)
+        sliderVal.Text   = tostring(config.maxDistance) .. "m"
+        distLabel.Text   = "Distancia: " .. config.maxDistance .. "m"
+        for _, e in pairs(espObjects) do
+            e.BillboardGui.MaxDistance = config.maxDistance
+        end
+        updateCounterAndStats()
+    end)
+
+    showDistBtn.MouseButton1Click:Connect(function()
+        config.showDistance = not config.showDistance
+        showDistBtn.Text = config.showDistance
+            and "VER DISTANCIA: ON"
+            or  "VER DISTANCIA: OFF"
+    end)
+
+    for _, d in ipairs(cornerBtns) do
+        d.btn.MouseButton1Click:Connect(function()
+            MainFrame.Position = d.pos
+        end)
+    end
+
+    applyBtn.MouseButton1Click:Connect(function()
+        local raw = filterInput.Text:match("^%s*(.-)%s*$")
+        config.filterText = raw
+        addToHistory(raw)
+
+        local matchCount = 0
+        for _, prompt in ipairs(findAllProximityPrompts()) do
+            local objectName = prompt.ObjectText ~= "" and prompt.ObjectText or "Objeto"
+            if matchesFilter(objectName) then matchCount = matchCount + 1 end
+        end
+
+        if raw ~= "" and matchCount == 0 then
+            statusFilterLabel.Text       = "Nenhum resultado para: " .. raw
+            statusFilterLabel.TextColor3 = th.danger
+        else
+            statusFilterLabel.Text       = raw == ""
+                and "Sem filtro — mostrando tudo"
+                or  matchCount .. " objeto(s) encontrado(s)"
+            statusFilterLabel.TextColor3 = th.accent
+        end
+
+        if config.espEnabled then
+            activateESP()
+            setESPState(true)
+        end
+    end)
+
+    clearBtn.MouseButton1Click:Connect(function()
+        filterInput.Text             = ""
+        config.filterText            = ""
+        statusFilterLabel.Text       = "Filtro limpo — mostrando tudo"
+        statusFilterLabel.TextColor3 = th.accent
+        if config.espEnabled then
+            activateESP()
+            setESPState(true)
+        end
+    end)
+
+    themeBtn.MouseButton1Click:Connect(function()
+        config.darkTheme = not config.darkTheme
+        screenGui:Destroy()
+        guiRef = nil
+        createMainGUI()
+    end)
+
+    local isMinimized = false
+    minimizeBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        if isMinimized then
+            MainFrame.Size      = UDim2.new(0,340,0,46)
+            TabsFrame.Visible   = false
+            ESPFrame.Visible    = false
+            FilterFrame.Visible = false
+            InfoFrame.Visible   = false
+            minimizeBtn.Text    = "+"
+        else
+            MainFrame.Size    = UDim2.new(0,340,0,500)
+            TabsFrame.Visible = true
+            switchTab(1)
+            minimizeBtn.Text  = "-"
+        end
+    end)
+
+    closeBtn.MouseButton1Click:Connect(function()
+        deactivateESP()
+        screenGui:Destroy()
+        guiRef = nil
+    end)
+
+    local dragging, dragStart, startPos = false, nil, nil
+    HeaderFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = MainFrame.Position
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            MainFrame.Position = startPos + UDim2.new(0,delta.X,0,delta.Y)
+        end
+    end)
+
+    return screenGui
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- ⌨️ TECLA F5
+-- ═══════════════════════════════════════════════════════════════
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.F5 then
+        if not config.espEnabled then
+            activateESP()
+        else
+            deactivateESP()
+        end
+        updateCounterAndStats()
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+-- LOOPS
+-- ═══════════════════════════════════════════════════════════════
+RunService.RenderStepped:Connect(function(dt)
+    updateDynamicSize(dt)
+end)
+
+local monitorTimer = 0
+RunService.Heartbeat:Connect(function(dt)
+    monitorTimer = monitorTimer + dt
+    if monitorTimer >= 0.5 then
+        monitorTimer = 0
+        monitorNewPrompts()
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+-- INICIAR
+-- ═══════════════════════════════════════════════════════════════
+print("ESP Proximity v4 carregado!")
+print("F5 para ativar/desativar")
+createMainGUI()
